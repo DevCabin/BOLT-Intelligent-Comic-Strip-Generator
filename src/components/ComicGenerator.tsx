@@ -92,7 +92,7 @@ export default function ComicGenerator() {
         setError(null);
         return await generateImage({
           prompt: desc,
-          size: '512x512',
+          size: selectedModel === 'dall-e-3' ? '1024x1024' : '512x512',
           model: selectedModel,
         });
       } catch (error) {
@@ -353,12 +353,27 @@ export default function ComicGenerator() {
                         <div className="text-left">
                           <div className="font-medium text-white">DALL-E 3</div>
                           <div className="text-xs text-gray-400 mt-1">$0.040 per image</div>
-                          <div className="text-xs text-gray-500 mt-1">512×512 resolution</div>
+                          <div className="text-xs text-gray-500 mt-1">1024×1024 resolution</div>
                         </div>
                       </button>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Selected: <span className="text-purple-400 font-medium">{selectedModel.toUpperCase()}</span>
+                    <div className="mt-3 p-2 bg-gray-800 rounded border-l-4 border-blue-500">
+                      <div className="text-xs text-gray-300">
+                        <div className="font-medium text-blue-400 mb-1">Currently Selected: {selectedModel.toUpperCase()}</div>
+                        {selectedModel === 'dall-e-3' ? (
+                          <div>
+                            <div>• Higher quality and better prompt understanding</div>
+                            <div>• Minimum resolution: 1024×1024 (4x larger than DALL-E 2)</div>
+                            <div>• 2x cost but significantly better anime/manga style results</div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div>• More affordable option at 512×512 resolution</div>
+                            <div>• Good for rapid prototyping and testing ideas</div>
+                            <div>• Half the cost of DALL-E 3</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
