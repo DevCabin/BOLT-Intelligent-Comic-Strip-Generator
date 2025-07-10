@@ -29,6 +29,7 @@ export default function ComicGenerator() {
   const [newProjectName, setNewProjectName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAIEnabled, setIsAIEnabled] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<'dall-e-2' | 'dall-e-3'>('dall-e-2');
 
   // Check if OpenAI is configured on mount
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function ComicGenerator() {
         return await generateImage({
           prompt: desc,
           size: '512x512',
-          model: 'dall-e-2',
+          model: selectedModel,
         });
       } catch (error) {
         console.error('AI generation failed:', error);
@@ -318,6 +319,46 @@ export default function ComicGenerator() {
                     <div className="flex items-center gap-2 text-red-400 text-sm">
                       <AlertCircle size={16} />
                       <span>{error}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Model Selection */}
+                {isAIEnabled && (
+                  <div className="bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-300 mb-3">AI Model Selection</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setSelectedModel('dall-e-2')}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          selectedModel === 'dall-e-2'
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-gray-600 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-medium text-white">DALL-E 2</div>
+                          <div className="text-xs text-gray-400 mt-1">$0.020 per image</div>
+                          <div className="text-xs text-gray-500 mt-1">512×512 resolution</div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedModel('dall-e-3')}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          selectedModel === 'dall-e-3'
+                            ? 'border-purple-500 bg-purple-500/10'
+                            : 'border-gray-600 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="text-left">
+                          <div className="font-medium text-white">DALL-E 3</div>
+                          <div className="text-xs text-gray-400 mt-1">$0.040 per image</div>
+                          <div className="text-xs text-gray-500 mt-1">512×512 resolution</div>
+                        </div>
+                      </button>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      Selected: <span className="text-purple-400 font-medium">{selectedModel.toUpperCase()}</span>
                     </div>
                   </div>
                 )}
