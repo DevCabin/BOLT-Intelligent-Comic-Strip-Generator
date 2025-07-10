@@ -1,10 +1,17 @@
 import OpenAI from 'openai';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Required for client-side usage
-});
+// Initialize OpenAI client only when API key is available
+let openai: OpenAI | null = null;
+
+const initializeOpenAI = () => {
+  if (!openai && import.meta.env.VITE_OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+      dangerouslyAllowBrowser: true // Required for client-side usage
+    });
+  }
+  return openai;
+};
 
 export interface ImageGenerationOptions {
   prompt: string;
@@ -19,6 +26,11 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
   try {
     if (!import.meta.env.VITE_OPENAI_API_KEY) {
       throw new Error('OpenAI API key not configured. Please add VITE_OPENAI_API_KEY to your .env file.');
+    }
+
+    const client = initializeOpenAI();
+    if (!client) {
+      throw new Error('Failed to initialize OpenAI client');
     }
 
     // Enhance the prompt for comic-style generation
@@ -39,7 +51,7 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
       generateOptions.n = 1; // DALL-E 3 only supports n=1
     }
 
-    const response = await openai.images.generate(generateOptions);
+    const response = await client.images.generate(generateOptions);
 
     const imageUrl = response.data[0]?.url;
     if (!imageUrl) {
