@@ -30,6 +30,8 @@ export default function ComicGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [isAIEnabled, setIsAIEnabled] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'dall-e-2' | 'dall-e-3'>('dall-e-2');
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [stylePrompt, setStylePrompt] = useState<string>('');
 
   // Check if OpenAI is configured on mount
   useEffect(() => {
@@ -90,8 +92,15 @@ export default function ComicGenerator() {
       // Use real AI generation
       try {
         setError(null);
+        
+        // Build style-consistent prompt
+        let enhancedPrompt = desc;
+        if (stylePrompt && currentProject && currentProject.frames.length > 0) {
+          enhancedPrompt = `${stylePrompt} ${desc}. Maintain the same art style, character design, and visual consistency as previous frames.`;
+        }
+        
         return await generateImage({
-          prompt: desc,
+          prompt: enhancedPrompt,
           size: selectedModel === 'dall-e-3' ? '1024x1024' : '512x512',
           model: selectedModel,
         });
@@ -180,6 +189,11 @@ export default function ComicGenerator() {
   const finalizeFrame = () => {
     if (!currentProject || !currentFrame) return;
     
+    // If this is the first frame, extract style information for consistency
+    if (currentProject.frames.length === 0) {
+      setStylePrompt(`Same art style as: ${currentFrame.description.split('.')[0]}.`);
+    }
+    
     const finalizedFrame = { ...currentFrame, isFinalized: true };
     const updatedProject = {
       ...currentProject,
@@ -202,15 +216,53 @@ export default function ComicGenerator() {
     link.click();
   };
 
+  const downloadAllFrames = () => {
+    if (!currentProject || currentProject.frames.length === 0) return;
+    
+    currentProject.frames.forEach((frame, index) => {
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = frame.imageUrl;
+        link.download = `${currentProject.name}-frame-${String(index + 1).padStart(2, '0')}.jpg`;
+        link.click();
+      }, index * 500); // Stagger downloads
+    });
+  };
+
+  const deleteFrame = (frameId: string) => {
+    if (!currentProject) return;
+    
+    const updatedFrames = currentProject.frames.filter(f => f.id !== frameId);
+    // Reorder remaining frames
+    const reorderedFrames = updatedFrames.map((frame, index) => ({
+      ...frame,
+      order: index + 1
+    }));
+    
+    const updatedProject = {
+      ...currentProject,
+      frames: reorderedFrames,
+      lastModified: new Date()
+    };
+    
+    setProjects(projects.map(p => p.id === currentProject.id ? updatedProject : p));
+    setCurrentProject(updatedProject);
+    
+    // Reset style if no frames left
+    if (reorderedFrames.length === 0) {
+      setStylePrompt('');
+      setReferenceImage(null);
+    }
+  };
+
   const handleReferenceUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
-        // Use uploaded image as reference for new project
-        // Here you would process the uploaded image as a reference
-        console.log('Reference image uploaded:', imageUrl);
+        setReferenceImage(imageUrl);
+        setStylePrompt('Match the art style, character design, and visual aesthetic of the reference image.');
       };
       reader.readAsDataURL(file);
     }
@@ -230,12 +282,12 @@ export default function ComicGenerator() {
               {isAIEnabled ? (
                 <div className="flex items-center gap-2 text-emerald-400 text-sm">
                   <Zap size={16} />
-                  <span>AI-Powered Manga Generation by DALL-E 2</span>
+                  <span>AI-Powered Comic Strip Generation</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-amber-400 text-sm">
                   <AlertCircle size={16} />
-                  <span>Demo Mode - Add OpenAI API key for AI manga generation</span>
+                  <span>Demo Mode - Add OpenAI API key for AI comic generation</span>
                 </div>
               )}
             </div>
@@ -252,7 +304,7 @@ export default function ComicGenerator() {
             </button>
             <label className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
               <Upload size={20} />
-              Upload Reference
+              Style Reference
               <input
                 type="file"
                 accept="image/*"
@@ -309,8 +361,48 @@ export default function ComicGenerator() {
             {/* Frame Generation Area */}
             <div className="bg-gray-800 rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-4">
-                {currentProject.frames.length === 0 ? 'Create First Frame' : `Create Frame ${currentProject.frames.length + 1}`}
+                {currentProject.frames.length === 0 ? 'Create First Frame (Sets Style)' : `Create Frame ${currentProject.frames.length + 1}`}
               </h3>
+              
+              {/* Style Reference Display */}
+              {(referenceImage || stylePrompt) && (
+                <div className="mb-4 p-3 bg-gray-700 rounded-lg border-l-4 border-emerald-500">
+                  <div className="flex items-start gap-3">
+                    {referenceImage && (
+                      <img 
+                        src={referenceImage} 
+                        alt="Style reference" 
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-emerald-400 mb-1">
+                        Style Reference Active
+                      </div>
+                      <div className="text-xs text-gray-300">
+                        {currentProject.frames.length === 0 
+                          ? "This will set the visual style for your entire comic strip"
+                          : "Maintaining consistency with your established style"
+                        }
+                      </div>
+                      {stylePrompt && (
+                        <div className="text-xs text-gray-400 mt-1 italic">
+                          "{stylePrompt}"
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setReferenceImage(null);
+                        setStylePrompt('');
+                      }}
+                      className="text-gray-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
               
               <div className="space-y-4">
                 {/* Error Display */}
@@ -382,8 +474,8 @@ export default function ComicGenerator() {
                   value={currentFrame ? editingDescription : description}
                   onChange={(e) => currentFrame ? setEditingDescription(e.target.value) : setDescription(e.target.value)}
                   placeholder={currentProject.frames.length === 0 
-                    ? "Describe your manga scene: A ninja with cat-like features standing in a moonlit meadow, full body visible, wide shot showing the entire character and background..."
-                    : "Describe the next manga scene with full character visible, wide shot composition, maintaining consistency with your character's design..."
+                    ? "Describe your first comic frame: A ninja with cat-like features standing in a moonlit meadow, establishing the main character and setting..."
+                    : "Describe the next comic frame: What happens next in your story? The same character now..."
                   }
                   className="w-full h-32 bg-gray-700 rounded-lg p-4 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                   disabled={isGenerating}
@@ -432,15 +524,15 @@ export default function ComicGenerator() {
                       )}
                       <div>
                         <p className="font-medium text-purple-400 mb-1">
-                          {isAIEnabled ? 'AI-Powered Manga Generation' : 'Refine Your Manga Frame'}
+                          {isAIEnabled ? 'AI-Powered Comic Generation' : 'Refine Your Comic Frame'}
                         </p>
-                        <p>Edit the description above to refine your manga artwork. You can:</p>
+                        <p>Edit the description above to refine your comic frame. You can:</p>
                         <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
-                          <li>Specify "full body shot" or "wide angle" for better framing</li>
-                          <li>Add "complete character visible" to avoid cropping</li>
-                          <li>Use "wide shot" or "establishing shot" for scene composition</li>
-                          <li>Describe clear, defined shapes rather than abstract concepts</li>
-                          {isAIEnabled && <li>Use detailed anime/manga terminology for best results</li>}
+                          <li>Focus on character actions and story progression</li>
+                          <li>Describe scene composition and camera angles</li>
+                          <li>Maintain character consistency across frames</li>
+                          <li>Consider panel-to-panel flow and pacing</li>
+                          {isAIEnabled && <li>Style consistency is automatically maintained</li>}
                         </ul>
                       </div>
                     </div>
@@ -482,7 +574,16 @@ export default function ComicGenerator() {
             {currentProject.frames.length > 0 && (
               <>
                 <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-xl font-semibold mb-4">Project Frames</h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold">Comic Strip Frames ({currentProject.frames.length})</h3>
+                    <button
+                      onClick={downloadAllFrames}
+                      className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors flex items-center gap-2 text-sm"
+                    >
+                      <Download size={16} />
+                      Download All
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {currentProject.frames.map(frame => (
                       <div key={frame.id} className="bg-gray-700 rounded-lg p-4">
@@ -495,6 +596,22 @@ export default function ComicGenerator() {
                         </div>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium">Frame {frame.order}</span>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => downloadFrame(frame)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              title="Download frame"
+                            >
+                              <Download size={14} />
+                            </button>
+                            <button
+                              onClick={() => deleteFrame(frame.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                              title="Delete frame"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-sm text-gray-300 overflow-hidden" style={{
                           display: '-webkit-box',
