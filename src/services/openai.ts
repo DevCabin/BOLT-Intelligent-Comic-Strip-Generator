@@ -34,7 +34,7 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
     }
 
     // Enhance the prompt for comic-style generation
-    const enhancedPrompt = `Full body shot, wide angle view, Japanese manga style illustration: ${options.prompt}. Complete character visible from head to toe, full scene composition, anime art style, clean sharp line art, cel-shaded flat colors, bold outlines, manga panel composition, detailed but not impressionistic, clear defined shapes, solid colors, professional manga artwork, wide shot perspective, full frame composition, not cropped, complete subject in frame.`;
+    const enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, no impressionistic effects, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, no painterly effects, no watercolor, no sketchy lines, clean geometric shapes, bright saturated colors, professional anime production art style, similar to Studio Ghibli or modern anime series, digital cel animation style, not realistic or photographic.`;
 
     const model = options.model || 'dall-e-2';
     const generateOptions: any = {
