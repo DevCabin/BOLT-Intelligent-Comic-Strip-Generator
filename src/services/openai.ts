@@ -54,6 +54,14 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
     }
 
     const response = await client.images.generate(generateOptions);
+    const response = await client.images.generate({
+      prompt: enhancedPrompt,
+      size: options.size || '1024x1024',
+      quality: options.quality || 'standard',
+      style: options.style || 'vivid',
+      n: options.n || 1,
+      model: model
+    });
 
     const imageUrl = response.data[0]?.url;
     if (!imageUrl) {
