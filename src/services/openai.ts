@@ -38,19 +38,9 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
     let enhancedPrompt: string;
     
     if (model === 'dall-e-2') {
-      // DALL-E 2 requires very explicit anti-photorealistic instructions
-      enhancedPrompt = `DIGITAL ILLUSTRATION NOT PHOTOGRAPH: ${options.prompt}. 
-      
-      MANDATORY STYLE: Hand-drawn anime manga artwork, 2D flat illustration, cartoon style, NOT realistic, NOT photographic, NOT 3D rendered. 
-      
-      VISUAL REQUIREMENTS: Bold black ink outlines, flat cel-shaded colors, solid color fills, no gradients, no shadows, no realistic lighting, no photorealistic textures, clean vector art style, traditional Japanese manga art style, simple geometric shapes, bright saturated colors.
-      
-      FORBIDDEN: No photographs, no realistic people, no stock photos, no 3D renders, no realistic lighting, no photographic backgrounds, no real-world imagery.
-      
-      ARTISTIC STYLE: Similar to Dragon Ball Z, Naruto, One Piece manga panels - pure 2D illustration style.`;
+      enhancedPrompt = `Anime manga style: ${options.prompt}. Bold black outlines, flat cel-shaded colors, 2D illustration, not photographic.`;
     } else {
-      // DALL-E 3 handles style instructions better
-      enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, professional anime production art style, digital cel animation style, not realistic or photographic.`;
+      enhancedPrompt = `Anime manga style: ${options.prompt}. Bold outlines, flat colors, clean digital illustration.`;
     }
 
     const response = await client.images.generate({
