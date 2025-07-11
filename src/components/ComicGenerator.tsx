@@ -31,7 +31,8 @@ export default function ComicGenerator() {
   const [isAIEnabled, setIsAIEnabled] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'dall-e-2' | 'dall-e-3'>('dall-e-2');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
-  const [stylePrompt, setStylePrompt] = useState<string>('');
+  const [baseStylePrompt, setBaseStylePrompt] = useState<string>('');
+  const [characterDescription, setCharacterDescription] = useState<string>('');
 
   // Check if OpenAI is configured on mount
   useEffect(() => {
@@ -93,10 +94,24 @@ export default function ComicGenerator() {
       try {
         setError(null);
         
-        // Build style-consistent prompt
+        // Build comprehensive style-consistent prompt
         let enhancedPrompt = desc;
-        if (stylePrompt && currentProject && currentProject.frames.length > 0) {
-          enhancedPrompt = `${stylePrompt} ${desc}. Maintain the same art style, character design, and visual consistency as previous frames.`;
+        
+        // Add style consistency for subsequent frames
+        if (currentProject && currentProject.frames.length > 0) {
+          const styleElements = [];
+          
+          if (baseStylePrompt) {
+            styleElements.push(baseStylePrompt);
+          }
+          
+          if (characterDescription) {
+            styleElements.push(`Character: ${characterDescription}`);
+          }
+          
+          if (styleElements.length > 0) {
+            enhancedPrompt = `${styleElements.join('. ')}. Scene: ${desc}. IMPORTANT: Maintain exact same art style, color scheme, character design, and visual consistency as previous frames in this comic strip.`;
+          }
         }
         
         return await generateImage({
@@ -189,9 +204,46 @@ export default function ComicGenerator() {
   const finalizeFrame = () => {
     if (!currentProject || !currentFrame) return;
     
-    // If this is the first frame, extract style information for consistency
+    // If this is the first frame, extract comprehensive style information
     if (currentProject.frames.length === 0) {
-      setStylePrompt(`Same art style as: ${currentFrame.description.split('.')[0]}.`);
+      // Extract style elements from the first frame description
+      const description = currentFrame.description.toLowerCase();
+      
+      // Determine if it's black and white or color
+      const isBlackAndWhite = description.includes('black and white') || 
+                             description.includes('monochrome') || 
+                             description.includes('grayscale') ||
+                             (!description.includes('color') && !description.includes('blue') && 
+                              !description.includes('red') && !description.includes('green') && 
+                              !description.includes('yellow') && !description.includes('purple'));
+      
+      // Extract character information
+      let characterInfo = '';
+      if (description.includes('ninja')) {
+        if (description.includes('cat')) {
+          characterInfo = 'ninja with cat-like features (cat face, cat ears, feline characteristics)';
+        } else {
+          characterInfo = 'ninja character';
+        }
+      }
+      
+      // Build comprehensive style prompt
+      const styleElements = [];
+      
+      if (isBlackAndWhite) {
+        styleElements.push('Black and white manga style, no colors, monochrome, grayscale shading');
+      } else {
+        styleElements.push('Colored manga/anime style with consistent color palette');
+      }
+      
+      styleElements.push('Same exact art style, line weight, and visual aesthetic');
+      
+      if (characterInfo) {
+        setCharacterDescription(characterInfo);
+        styleElements.push(`Character consistency: ${characterInfo}`);
+      }
+      
+      setBaseStylePrompt(styleElements.join('. '));
     }
     
     const finalizedFrame = { ...currentFrame, isFinalized: true };
@@ -250,7 +302,8 @@ export default function ComicGenerator() {
     
     // Reset style if no frames left
     if (reorderedFrames.length === 0) {
-      setStylePrompt('');
+      setBaseStylePrompt('');
+      setCharacterDescription('');
       setReferenceImage(null);
     }
   };
@@ -262,7 +315,7 @@ export default function ComicGenerator() {
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
         setReferenceImage(imageUrl);
-        setStylePrompt('Match the art style, character design, and visual aesthetic of the reference image.');
+        setBaseStylePrompt('Match the exact art style, character design, color scheme, and visual aesthetic of the reference image');
       };
       reader.readAsDataURL(file);
     }
@@ -365,7 +418,7 @@ export default function ComicGenerator() {
               </h3>
               
               {/* Style Reference Display */}
-              {(referenceImage || stylePrompt) && (
+              {(referenceImage || baseStylePrompt || characterDescription) && (
                 <div className="mb-4 p-3 bg-gray-700 rounded-lg border-l-4 border-emerald-500">
                   <div className="flex items-start gap-3">
                     {referenceImage && (
@@ -382,19 +435,25 @@ export default function ComicGenerator() {
                       <div className="text-xs text-gray-300">
                         {currentProject.frames.length === 0 
                           ? "This will set the visual style for your entire comic strip"
-                          : "Maintaining consistency with your established style"
+                          : "Maintaining visual consistency with established style"
                         }
                       </div>
-                      {stylePrompt && (
+                      {baseStylePrompt && (
                         <div className="text-xs text-gray-400 mt-1 italic">
-                          "{stylePrompt}"
+                          "Style: {baseStylePrompt}"
+                        </div>
+                      )}
+                      {characterDescription && (
+                        <div className="text-xs text-gray-400 mt-1 italic">
+                          "Character: {characterDescription}"
                         </div>
                       )}
                     </div>
                     <button
                       onClick={() => {
                         setReferenceImage(null);
-                        setStylePrompt('');
+                        setBaseStylePrompt('');
+                        setCharacterDescription('');
                       }}
                       className="text-gray-400 hover:text-red-400 transition-colors"
                     >
@@ -474,8 +533,10 @@ export default function ComicGenerator() {
                   value={currentFrame ? editingDescription : description}
                   onChange={(e) => currentFrame ? setEditingDescription(e.target.value) : setDescription(e.target.value)}
                   placeholder={currentProject.frames.length === 0 
-                    ? "Describe your first comic frame: A ninja with cat-like features standing in a moonlit meadow, establishing the main character and setting..."
-                    : "Describe the next comic frame: What happens next in your story? The same character now..."
+                    ? "Describe your first comic frame (this sets the style): A black and white ninja with cat-like features standing in a moonlit meadow..."
+                    : characterDescription 
+                      ? `Describe the next scene with ${characterDescription}: What happens next in your story?`
+                      : "Describe the next comic frame: What happens next in your story?"
                   }
                   className="w-full h-32 bg-gray-700 rounded-lg p-4 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
                   disabled={isGenerating}
@@ -529,10 +590,10 @@ export default function ComicGenerator() {
                         <p>Edit the description above to refine your comic frame. You can:</p>
                         <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
                           <li>Focus on character actions and story progression</li>
-                          <li>Describe scene composition and camera angles</li>
-                          <li>Maintain character consistency across frames</li>
+                          <li>Use "the ninja" or "the character" to reference your established character</li>
+                          <li>Describe new scenes and actions while maintaining character identity</li>
                           <li>Consider panel-to-panel flow and pacing</li>
-                          {isAIEnabled && <li>Style consistency is automatically maintained</li>}
+                          {isAIEnabled && <li>Style and character consistency is automatically maintained</li>}
                         </ul>
                       </div>
                     </div>
