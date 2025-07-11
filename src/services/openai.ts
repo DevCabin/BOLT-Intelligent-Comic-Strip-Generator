@@ -53,7 +53,6 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
       enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, professional anime production art style, digital cel animation style, not realistic or photographic.`;
     }
 
-    const response = await client.images.generate(generateOptions);
     const response = await client.images.generate({
       prompt: enhancedPrompt,
       size: options.size || '1024x1024',
