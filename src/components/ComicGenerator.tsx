@@ -33,6 +33,8 @@ export default function ComicGenerator() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [baseStylePrompt, setBaseStylePrompt] = useState<string>('');
   const [characterDescription, setCharacterDescription] = useState<string>('');
+  const [masterStyleTemplate, setMasterStyleTemplate] = useState<string>('');
+  const [showStyleSetup, setShowStyleSetup] = useState(false);
 
   // Check if OpenAI is configured on mount
   useEffect(() => {
@@ -99,19 +101,8 @@ export default function ComicGenerator() {
         
         // Add style consistency for subsequent frames
         if (currentProject && currentProject.frames.length > 0) {
-          const styleElements = [];
-          
-          if (baseStylePrompt) {
-            styleElements.push(baseStylePrompt);
-          }
-          
-          if (characterDescription) {
-            styleElements.push(`Character: ${characterDescription}`);
-          }
-          
-          if (styleElements.length > 0) {
-            enhancedPrompt = `${styleElements.join('. ')}. Scene: ${desc}. IMPORTANT: Maintain exact same art style, color scheme, character design, and visual consistency as previous frames in this comic strip.`;
-          }
+          // Use the master style template for absolute consistency
+          enhancedPrompt = `${masterStyleTemplate} NEW SCENE: ${desc}. CRITICAL: Use the EXACT same character appearance, art style, color palette, and visual aesthetic as established in previous frames. Do not change the character's design, clothing, or distinctive features.`;
         }
         
         return await generateImage({
@@ -204,46 +195,22 @@ export default function ComicGenerator() {
   const finalizeFrame = () => {
     if (!currentProject || !currentFrame) return;
     
-    // If this is the first frame, extract comprehensive style information
+    // If this is the first frame, create the master style template
     if (currentProject.frames.length === 0) {
-      // Extract style elements from the first frame description
-      const description = currentFrame.description.toLowerCase();
+      // Create a comprehensive master template from the first frame
+      const masterTemplate = `MASTER STYLE TEMPLATE: ${currentFrame.description}. This establishes the definitive art style, character design, color scheme, and visual aesthetic for this entire comic strip series.`;
+      setMasterStyleTemplate(masterTemplate);
       
-      // Determine if it's black and white or color
-      const isBlackAndWhite = description.includes('black and white') || 
-                             description.includes('monochrome') || 
-                             description.includes('grayscale') ||
-                             (!description.includes('color') && !description.includes('blue') && 
-                              !description.includes('red') && !description.includes('green') && 
-                              !description.includes('yellow') && !description.includes('purple'));
+      // Extract key elements for display
+      const desc = currentFrame.description.toLowerCase();
+      setBaseStylePrompt(currentFrame.description);
       
-      // Extract character information
-      let characterInfo = '';
-      if (description.includes('ninja')) {
-        if (description.includes('cat')) {
-          characterInfo = 'ninja with cat-like features (cat face, cat ears, feline characteristics)';
-        } else {
-          characterInfo = 'ninja character';
-        }
+      // Extract character info for user guidance
+      if (desc.includes('ninja') || desc.includes('character') || desc.includes('person') || desc.includes('man') || desc.includes('woman')) {
+        const words = currentFrame.description.split(' ');
+        const characterHints = words.slice(0, 10).join(' '); // First part usually describes the character
+        setCharacterDescription(characterHints);
       }
-      
-      // Build comprehensive style prompt
-      const styleElements = [];
-      
-      if (isBlackAndWhite) {
-        styleElements.push('Black and white manga style, no colors, monochrome, grayscale shading');
-      } else {
-        styleElements.push('Colored manga/anime style with consistent color palette');
-      }
-      
-      styleElements.push('Same exact art style, line weight, and visual aesthetic');
-      
-      if (characterInfo) {
-        setCharacterDescription(characterInfo);
-        styleElements.push(`Character consistency: ${characterInfo}`);
-      }
-      
-      setBaseStylePrompt(styleElements.join('. '));
     }
     
     const finalizedFrame = { ...currentFrame, isFinalized: true };
@@ -304,6 +271,7 @@ export default function ComicGenerator() {
     if (reorderedFrames.length === 0) {
       setBaseStylePrompt('');
       setCharacterDescription('');
+      setMasterStyleTemplate('');
       setReferenceImage(null);
     }
   };
@@ -315,12 +283,26 @@ export default function ComicGenerator() {
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
         setReferenceImage(imageUrl);
-        setBaseStylePrompt('Match the exact art style, character design, color scheme, and visual aesthetic of the reference image');
+        // When reference image is uploaded, it becomes the master template
+        const referenceTemplate = 'MASTER STYLE TEMPLATE: Match the exact art style, character design, color scheme, line weight, shading technique, and visual aesthetic shown in the reference image. Maintain absolute consistency with this established style.';
+        setMasterStyleTemplate(referenceTemplate);
+        setBaseStylePrompt('Reference image uploaded - style locked');
       };
       reader.readAsDataURL(file);
     }
   };
 
+  const handleStyleSetup = () => {
+    setShowStyleSetup(true);
+  };
+
+  const saveCustomStyle = (styleDescription: string, characterDesc: string) => {
+    const customTemplate = `MASTER STYLE TEMPLATE: ${styleDescription}. Character: ${characterDesc}. This establishes the definitive art style, character design, and visual aesthetic for this entire comic strip series.`;
+    setMasterStyleTemplate(customTemplate);
+    setBaseStylePrompt(styleDescription);
+    setCharacterDescription(characterDesc);
+    setShowStyleSetup(false);
+  };
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8">
@@ -354,6 +336,13 @@ export default function ComicGenerator() {
             >
               <Plus size={20} />
               New Project
+            </button>
+            <button
+              onClick={handleStyleSetup}
+              className="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Edit3 size={20} />
+              Setup Style
             </button>
             <label className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
               <Upload size={20} />
@@ -403,62 +392,85 @@ export default function ComicGenerator() {
             {/* Project Header */}
             <div className="flex justify-between items-center">
               <h2 className="text-2xl font-bold">{currentProject.name}</h2>
-              <button
-                onClick={() => setCurrentProject(null)}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                Back to Projects
-              </button>
+              <div className="flex gap-4">
+                <button
+                  onClick={handleStyleSetup}
+                  className="bg-indigo-600 hover:bg-indigo-700 px-3 py-1 rounded-lg flex items-center gap-2 transition-colors text-sm"
+                >
+                  <Edit3 size={16} />
+                  Edit Style
+                </button>
+                <button
+                  onClick={() => setCurrentProject(null)}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  Back to Projects
+                </button>
+              </div>
             </div>
+
+            {/* Style Status Display */}
+            {(masterStyleTemplate || referenceImage) && (
+              <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full mt-1 flex-shrink-0"></div>
+                  <div className="flex-1">
+                    <div className="font-medium text-emerald-400 mb-2">
+                      🎨 Style Consistency Active
+                    </div>
+                    <div className="text-sm text-gray-300 mb-2">
+                      All new frames will automatically match your established style and character design.
+                    </div>
+                    {referenceImage && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <img src={referenceImage} alt="Style reference" className="w-12 h-12 object-cover rounded" />
+                        <span className="text-xs text-gray-400">Reference image active</span>
+                      </div>
+                    )}
+                    {baseStylePrompt && !referenceImage && (
+                      <div className="text-xs text-gray-400 bg-gray-800 rounded p-2 font-mono">
+                        "{baseStylePrompt.substring(0, 100)}..."
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setReferenceImage(null);
+                      setBaseStylePrompt('');
+                      setCharacterDescription('');
+                      setMasterStyleTemplate('');
+                    }}
+                    className="text-gray-400 hover:text-red-400 transition-colors"
+                    title="Reset style"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Frame Generation Area */}
             <div className="bg-gray-800 rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-4">
-                {currentProject.frames.length === 0 ? 'Create First Frame (Sets Style)' : `Create Frame ${currentProject.frames.length + 1}`}
+                {!masterStyleTemplate && currentProject.frames.length === 0 
+                  ? 'Create First Frame (This Will Lock Your Style)' 
+                  : `Create Frame ${currentProject.frames.length + 1}`}
               </h3>
               
-              {/* Style Reference Display */}
-              {(referenceImage || baseStylePrompt || characterDescription) && (
-                <div className="mb-4 p-3 bg-gray-700 rounded-lg border-l-4 border-emerald-500">
-                  <div className="flex items-start gap-3">
-                    {referenceImage && (
-                      <img 
-                        src={referenceImage} 
-                        alt="Style reference" 
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-emerald-400 mb-1">
-                        Style Reference Active
+              {/* Warning for first frame */}
+              {!masterStyleTemplate && currentProject.frames.length === 0 && (
+                <div className="mb-4 p-3 bg-amber-900/20 border border-amber-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-amber-400 mb-1">
+                        First Frame Sets Your Style
                       </div>
                       <div className="text-xs text-gray-300">
-                        {currentProject.frames.length === 0 
-                          ? "This will set the visual style for your entire comic strip"
-                          : "Maintaining visual consistency with established style"
-                        }
+                        Be very specific about your character's appearance, art style, and color scheme. 
+                        This description will be used to maintain consistency across all future frames.
                       </div>
-                      {baseStylePrompt && (
-                        <div className="text-xs text-gray-400 mt-1 italic">
-                          "Style: {baseStylePrompt}"
-                        </div>
-                      )}
-                      {characterDescription && (
-                        <div className="text-xs text-gray-400 mt-1 italic">
-                          "Character: {characterDescription}"
-                        </div>
-                      )}
                     </div>
-                    <button
-                      onClick={() => {
-                        setReferenceImage(null);
-                        setBaseStylePrompt('');
-                        setCharacterDescription('');
-                      }}
-                      className="text-gray-400 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
                   </div>
                 </div>
               )}
@@ -533,9 +545,9 @@ export default function ComicGenerator() {
                   value={currentFrame ? editingDescription : description}
                   onChange={(e) => currentFrame ? setEditingDescription(e.target.value) : setDescription(e.target.value)}
                   placeholder={currentProject.frames.length === 0 
-                    ? "Describe your first comic frame (this sets the style): A black and white ninja with cat-like features standing in a moonlit meadow..."
-                    : characterDescription 
-                      ? `Describe the next scene with ${characterDescription}: What happens next in your story?`
+                    ? "Describe your first comic frame in detail (this locks your style): A black and white manga-style ninja with cat-like features, wearing dark clothing, standing in a moonlit forest..."
+                    : masterStyleTemplate
+                      ? "Describe the next scene: The same character now moves to a different location, or performs a new action..."
                       : "Describe the next comic frame: What happens next in your story?"
                   }
                   className="w-full h-32 bg-gray-700 rounded-lg p-4 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -590,10 +602,10 @@ export default function ComicGenerator() {
                         <p>Edit the description above to refine your comic frame. You can:</p>
                         <ul className="list-disc list-inside mt-1 space-y-0.5 text-xs">
                           <li>Focus on character actions and story progression</li>
-                          <li>Use "the ninja" or "the character" to reference your established character</li>
+                          <li>Use "the character" or "the same character" to reference your established character</li>
                           <li>Describe new scenes and actions while maintaining character identity</li>
                           <li>Consider panel-to-panel flow and pacing</li>
-                          {isAIEnabled && <li>Style and character consistency is automatically maintained</li>}
+                          {masterStyleTemplate && <li>Style and character consistency is automatically enforced</li>}
                         </ul>
                       </div>
                     </div>
@@ -719,6 +731,63 @@ export default function ComicGenerator() {
           </div>
         )}
       </div>
+        {/* Style Setup Modal */}
+        {showStyleSetup && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+              <h3 className="text-xl font-semibold mb-4">Setup Style & Character Consistency</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Art Style Description
+                  </label>
+                  <textarea
+                    placeholder="Describe the art style: Black and white manga style, detailed line work, dramatic shadows..."
+                    className="w-full h-24 bg-gray-700 rounded-lg p-3 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    id="styleDescription"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Character Description
+                  </label>
+                  <textarea
+                    placeholder="Describe your main character: A ninja with cat-like features, wearing dark clothing, has pointed ears and whiskers..."
+                    className="w-full h-24 bg-gray-700 rounded-lg p-3 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    id="characterDescription"
+                  />
+                </div>
+                <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                  <div className="text-sm text-blue-400 font-medium mb-1">💡 Pro Tip</div>
+                  <div className="text-xs text-gray-300">
+                    Be as specific as possible. Include details about clothing, facial features, color scheme, 
+                    and art style. This information will be used to maintain perfect consistency across all frames.
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    const styleDesc = (document.getElementById('styleDescription') as HTMLTextAreaElement).value;
+                    const charDesc = (document.getElementById('characterDescription') as HTMLTextAreaElement).value;
+                    if (styleDesc.trim() || charDesc.trim()) {
+                      saveCustomStyle(styleDesc, charDesc);
+                    }
+                  }}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 py-2 rounded-lg transition-colors"
+                >
+                  Save Style Template
+                </button>
+                <button
+                  onClick={() => setShowStyleSetup(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 py-2 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
