@@ -197,8 +197,7 @@ export default function ComicGenerator() {
     
     // If this is the first frame, create the master style template
     if (currentProject.frames.length === 0) {
-      // Create a comprehensive master template from the first frame
-      const masterTemplate = `MASTER STYLE TEMPLATE: ${currentFrame.description}. This establishes the definitive art style, character design, color scheme, and visual aesthetic for this entire comic strip series.`;
+      const masterTemplate = `Style: ${currentFrame.description}`;
       setMasterStyleTemplate(masterTemplate);
       
       // Extract key elements for display
@@ -283,8 +282,7 @@ export default function ComicGenerator() {
       reader.onload = (e) => {
         const imageUrl = e.target?.result as string;
         setReferenceImage(imageUrl);
-        // When reference image is uploaded, it becomes the master template
-        const referenceTemplate = 'MASTER STYLE TEMPLATE: Match the exact art style, character design, color scheme, line weight, shading technique, and visual aesthetic shown in the reference image. Maintain absolute consistency with this established style.';
+        const referenceTemplate = 'Match reference image style and character design exactly.';
         setMasterStyleTemplate(referenceTemplate);
         setBaseStylePrompt('Reference image uploaded - style locked');
       };
@@ -297,7 +295,7 @@ export default function ComicGenerator() {
   };
 
   const saveCustomStyle = (styleDescription: string, characterDesc: string) => {
-    const customTemplate = `MASTER STYLE TEMPLATE: ${styleDescription}. Character: ${characterDesc}. This establishes the definitive art style, character design, and visual aesthetic for this entire comic strip series.`;
+    const customTemplate = `Style: ${styleDescription}. Character: ${characterDesc}`;
     setMasterStyleTemplate(customTemplate);
     setBaseStylePrompt(styleDescription);
     setCharacterDescription(characterDesc);
