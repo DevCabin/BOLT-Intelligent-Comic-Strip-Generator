@@ -33,8 +33,25 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
       throw new Error('Failed to initialize OpenAI client');
     }
 
-    // Enhance the prompt for comic-style generation
-    const enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, no impressionistic effects, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, no painterly effects, no watercolor, no sketchy lines, clean geometric shapes, bright saturated colors, professional anime production art style, similar to Studio Ghibli or modern anime series, digital cel animation style, not realistic or photographic.`;
+    // Enhanced prompt engineering with model-specific optimizations
+    const model = options.model || 'dall-e-2';
+    let enhancedPrompt: string;
+    
+    if (model === 'dall-e-2') {
+      // DALL-E 2 requires very explicit anti-photorealistic instructions
+      enhancedPrompt = `DIGITAL ILLUSTRATION NOT PHOTOGRAPH: ${options.prompt}. 
+      
+      MANDATORY STYLE: Hand-drawn anime manga artwork, 2D flat illustration, cartoon style, NOT realistic, NOT photographic, NOT 3D rendered. 
+      
+      VISUAL REQUIREMENTS: Bold black ink outlines, flat cel-shaded colors, solid color fills, no gradients, no shadows, no realistic lighting, no photorealistic textures, clean vector art style, traditional Japanese manga art style, simple geometric shapes, bright saturated colors.
+      
+      FORBIDDEN: No photographs, no realistic people, no stock photos, no 3D renders, no realistic lighting, no photographic backgrounds, no real-world imagery.
+      
+      ARTISTIC STYLE: Similar to Dragon Ball Z, Naruto, One Piece manga panels - pure 2D illustration style.`;
+    } else {
+      // DALL-E 3 handles style instructions better
+      enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, professional anime production art style, digital cel animation style, not realistic or photographic.`;
+    }
 
     const model = options.model || 'dall-e-2';
     const generateOptions: any = {
