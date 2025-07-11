@@ -53,21 +53,6 @@ export const generateImage = async (options: ImageGenerationOptions): Promise<st
       enhancedPrompt = `Anime manga style digital artwork: ${options.prompt}. Clean vector art style, bold black outlines, flat cel-shaded colors, no gradients, sharp clean lines, solid color fills, traditional anime character design, manga panel style, crisp digital illustration, professional anime production art style, digital cel animation style, not realistic or photographic.`;
     }
 
-    const model = options.model || 'dall-e-2';
-    const generateOptions: any = {
-      model,
-      prompt: enhancedPrompt,
-      size: options.size || '512x512',
-      n: options.n || 1,
-    };
-
-    // DALL-E 3 specific options
-    if (model === 'dall-e-3') {
-      generateOptions.quality = options.quality || 'standard';
-      generateOptions.style = options.style || 'vivid';
-      generateOptions.n = 1; // DALL-E 3 only supports n=1
-    }
-
     const response = await client.images.generate(generateOptions);
 
     const imageUrl = response.data[0]?.url;
