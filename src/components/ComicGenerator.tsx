@@ -101,24 +101,8 @@ export default function ComicGenerator() {
         
         // Add style consistency for subsequent frames
         if (currentProject && currentProject.frames.length > 0) {
-          // Use the master style template for absolute consistency
-          if (selectedModel === 'dall-e-2') {
-            // DALL-E 2 needs very explicit instructions to avoid stock photos
-            enhancedPrompt = `${masterStyleTemplate} 
-            
-            NEW SCENE: ${desc}. 
-            
-            CRITICAL CONSISTENCY REQUIREMENTS:
-            - Use the EXACT same character appearance from previous frames
-            - Maintain the EXACT same art style (2D illustration, NOT photograph)
-            - Keep the same color palette and visual aesthetic
-            - Same character design, clothing, and distinctive features
-            - MUST be hand-drawn anime/manga style, NOT realistic or photographic
-            - NO stock photos, NO realistic people, NO 3D renders`;
-          } else {
-            // DALL-E 3 handles consistency better with simpler instructions
-            enhancedPrompt = `${masterStyleTemplate} NEW SCENE: ${desc}. CRITICAL: Use the EXACT same character appearance, art style, color palette, and visual aesthetic as established in previous frames. Do not change the character's design, clothing, or distinctive features.`;
-          }
+          // Use the master style template with the new scene description
+          enhancedPrompt = `${masterStyleTemplate} NEW SCENE: ${desc}`;
         }
         
         return await generateImage({
